@@ -21,56 +21,47 @@ playwright install chromium
 
 ## Uso
 
-### Pipeline Python: identificar temática desde un canal
+### Pipeline Python: generar prompt narrativo en un `.txt`
 
-Entra al canal indicado, toma los últimos 10 vídeos y elige uno al azar como tema. **Por defecto corre en segundo plano (headless)**; usa `--show` si quieres ver el navegador:
+Este script tiene 2 modos:
 
-```bash
-python scripts/run_channel_topic.py @nombre_canal
-python scripts/run_channel_topic.py "https://www.youtube.com/@nombre_canal"
-python scripts/run_channel_topic.py @nombre_canal --show   # con ventana
-python scripts/run_channel_topic.py @nombre_canal --chrome-profile   # perfil Default
-python scripts/run_channel_topic.py @nombre_canal --chrome-profile "Profile 1"   # perfil concreto (Chrome estable)
-python scripts/run_channel_topic.py @nombre_canal --chrome-dev --chrome-profile "Profile 1"   # Chrome Dev, Profile 1
-python scripts/run_channel_topic.py @nombre_canal --user-data-dir "C:\...\Chrome Dev\User Data" --chrome-profile "Profile 1"   # ruta completa (User Data + Profile)
-```
-
-**Perfil de Chrome:** con `--chrome-profile` usas tu Chrome (extensiones, cookies). Sin nombre = perfil **Default**. Con nombre = ese perfil: `--chrome-profile "Profile 1"`, `"Profile 2"`, etc. Con `--chrome-dev` usas la ruta de **Chrome Dev** (p. ej. `...\Chrome Dev\User Data`). Con `--user-data-dir` pasas la ruta de **User Data** (y sigues indicando el perfil con `--chrome-profile`). Debes **cerrar Chrome** (o al menos ese perfil) antes de ejecutar.
-
-**Transcripcion:** la duracion maxima (segundos) se lee de `.env` (`TRANSCRIPT_MAX_SECONDS`, por defecto 60). Puedes copiar `.env.example` a `.env` y ajustarla. `--transcript-seconds` en CLI tiene prioridad sobre el .env.
-
-Si no tienes el paquete instalado: `PYTHONPATH=src python scripts/run_channel_topic.py @nombre_canal`
-
-### Paso 2: Generar el prompt narrativo en un `.txt` (sin abrir ChatGPT)
-
-Despues de elegir video y obtener transcripcion (paso 1), genera el prompt de `narrative_master_prompt` (topic = titulo del video, context = transcripcion, total_parts desde `.env`) y lo guarda como `.txt` dentro de `./output`.
+- **All-in-one**: canal -> elige video -> obtiene transcripción -> genera prompt -> guarda `.txt`
+- **Paso 2**: topic + context -> genera prompt -> guarda `.txt`
 
 ```bash
+# All-in-one (canal -> transcripción -> prompt)
+python scripts/run_script_pipeline.py --channel @nombre_canal
+python scripts/run_script_pipeline.py --channel "https://www.youtube.com/@nombre_canal" --show
+python scripts/run_script_pipeline.py --channel @nombre_canal --days-back 7
+python scripts/run_script_pipeline.py --channel @nombre_canal --full-transcript
+python scripts/run_script_pipeline.py --channel @nombre_canal --transcript-seconds 90
+
+# Paso 2 (topic + context -> prompt)
 python scripts/run_script_pipeline.py --topic "Titulo del video" --context "Texto de la transcripcion..."
 python scripts/run_script_pipeline.py --topic "..." --context-file transcript.txt
 ```
 
-Opciones: `--topic` (titulo del video), `--context` (transcripcion en linea) o `--context-file` (transcripcion en archivo). Se construye el prompt con `total_parts` de `.env` (o `--total-parts N`) y se guarda en `./output`.
+**Perfil de Chrome (all-in-one):** con `--chrome-profile` usas tu Chrome (cookies, etc.). Sin nombre = perfil **Default**. Con nombre = ese perfil: `--chrome-profile "Profile 1"`, `"Profile 2"`, etc. Con `--chrome-dev` usas la ruta de **Chrome Dev**. Con `--user-data-dir` pasas la ruta completa de **User Data**. Debes **cerrar Chrome** (o al menos ese perfil) antes de ejecutar.
 
-### Todo en uno: paso 1 + paso 2 (canal, transcripcion y prompt en `.txt`)
+**Transcripción (all-in-one):** por defecto toma segundos desde `.env` (`TRANSCRIPT_MAX_SECONDS`). Usa `--transcript-seconds` para cambiarlo o `--full-transcript` para transcribir todo el video.
 
-Un solo comando hace: canal -> elige video -> obtiene transcripcion -> genera el prompt narrativo -> lo guarda en `./output`.
+### Descargar imágenes de una persona (DuckDuckGo Images)
 
-```bash
-python scripts/run_channel_topic_then_prompt.py @RecuerdosdeMaribel --user-data-dir "C:\...\ChromeAutomation" --chrome-profile "Default" --chrome-dev
-```
-
-Mismas opciones de perfil que en paso 1. Chrome debe estar cerrado.
-
-### Listar extensiones de un perfil de Chrome
-
-Lee del disco las extensiones instaladas en un perfil (Chrome puede estar abierto):
+Instala el extra:
 
 ```bash
-python scripts/list_chrome_extensions.py --chrome-dev --chrome-profile "Profile 1"
-python scripts/list_chrome_extensions.py --chrome-profile "Profile 1"   # Chrome estable
-python scripts/list_chrome_extensions.py -v   # Default + verbose (id, descripción)
+pip install -e ".[images]"
 ```
+
+Uso:
+
+```bash
+python scripts/download_person_images.py "Scarlett Johansson" --num 12 --orientation horizontal
+python scripts/download_person_images.py "Scarlett Johansson" --num 12 --orientation vertical
+python scripts/download_person_images.py "Scarlett Johansson" --num 12 --orientation any
+```
+
+Salida por defecto: `output/images/<persona>/` (está ignorado por git).
 
 ---
 

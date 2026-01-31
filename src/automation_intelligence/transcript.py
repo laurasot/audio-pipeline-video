@@ -28,14 +28,15 @@ def video_id_from_youtube_url(url: str) -> str | None:
     return v[0] if v and len(v[0]) == 11 else None
 
 
-def get_first_minute_transcript(
+def get_transcript_text(
     video_url: str,
-    max_seconds: float = DEFAULT_TRANSCRIPT_MAX_SECONDS,
+    *,
+    max_seconds: float | None = DEFAULT_TRANSCRIPT_MAX_SECONDS,
 ) -> str:
-    """Return transcript text for the first max_seconds of the video (same source as transcript extensions).
+    """Return transcript text for a video (same source as transcript extensions).
 
-    video_url: YouTube watch URL or youtu.be link.
-    max_seconds: maximum duration in seconds to include (default 60).
+    If max_seconds is None, returns the full transcript.
+    If max_seconds is a float, returns transcript text from [0, max_seconds).
     Returns empty string if no transcript, video unavailable, or on error.
     """
     vid = video_id_from_youtube_url(video_url)
@@ -91,7 +92,7 @@ def get_first_minute_transcript(
     parts: list[str] = []
     for snippet in fetched:
         start = getattr(snippet, "start", 0) or 0
-        if float(start) >= max_seconds:
+        if max_seconds is not None and float(start) >= max_seconds:
             break
         text = (getattr(snippet, "text", "") or "").strip()
         if text:
@@ -100,6 +101,24 @@ def get_first_minute_transcript(
     result = " ".join(parts).replace("\n", " ").strip()
     logger.debug(
         "Transcript fetched",
-        extra={"video_id": vid, "max_seconds": max_seconds, "char_count": len(result)},
+        extra={
+            "video_id": vid,
+            "max_seconds": max_seconds,
+            "char_count": len(result),
+        },
     )
     return result
+
+
+def get_first_minute_transcript(
+    video_url: str,
+    max_seconds: float = DEFAULT_TRANSCRIPT_MAX_SECONDS,
+) -> str:
+    """Return transcript text for the first max_seconds of the video (same source as transcript extensions).
+
+    video_url: YouTube watch URL or youtu.be link.
+    max_seconds: maximum duration in seconds to include (default 60).
+    Returns empty string if no transcript, video unavailable, or on error.
+    """
+    # Backwards-compatible wrapper kept for existing callers.
+    return get_transcript_text(video_url, max_seconds=max_seconds)

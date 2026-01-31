@@ -12,7 +12,7 @@ from automation_intelligence.browser.context import create_browser_context, new_
 from automation_intelligence.logging.logger import get_logger
 from automation_intelligence.transcript import (
     DEFAULT_TRANSCRIPT_MAX_SECONDS,
-    get_first_minute_transcript,
+    get_transcript_text,
 )
 
 logger = get_logger(__name__)
@@ -42,23 +42,25 @@ def run_channel_topic_pipeline(
     *,
     headless: bool = True,
     recent_videos_limit: int = RECENT_VIDEOS_POOL_SIZE,
+    days_back: int | None = None,
     rng: random.Random | None = None,
     progress: Callable[[str], None] | None = None,
     user_data_dir: str | Path | None = None,
     profile_directory: str | None = None,
     browser_channel: str | None = None,
-    transcript_max_seconds: float = DEFAULT_TRANSCRIPT_MAX_SECONDS,
+    transcript_max_seconds: float | None = DEFAULT_TRANSCRIPT_MAX_SECONDS,
 ) -> ChannelTopicResult:
     """Navigate to the channel, get last N videos, pick one at random, return its title, URL and transcript.
 
     channel_param: URL, @handle, or path (e.g. @mychannel, /@mychannel, /channel/UC...).
     recent_videos_limit: pool size (default 10). One is chosen at random.
+    days_back: if set, only consider videos with relative age <= days_back (best-effort).
     rng: optional Random instance for reproducible tests.
     progress: optional callback (e.g. print) to show each step; receives one string per step.
     user_data_dir: Chrome "User Data" folder (parent of profiles).
     profile_directory: "Default", "Profile 1", "Profile 2", etc.
     browser_channel: when user_data_dir is set, "chrome" (default), "chrome-dev", "chrome-beta", "chrome-canary".
-    transcript_max_seconds: max duration in seconds for the transcript (default 60).
+    transcript_max_seconds: max duration in seconds for the transcript (default 60). None = full transcript.
     """
     start = time.perf_counter()
     out = progress if progress is not None else _noop_progress
@@ -84,15 +86,35 @@ def run_channel_topic_pipeline(
         channel_name = actions.get_channel_name(page)
         out(f"  -> Nombre: {channel_name}")
 
-        out(f"Paso 4: Buscando ultimos {recent_videos_limit} videos (#video-title)...")
-        videos = actions.get_recent_videos(page, limit=recent_videos_limit)
-        out(f"  -> Encontrados: {len(videos)} videos.")
+        pool_limit = recent_videos_limit
+        if days_back is not None:
+            pool_limit = max(recent_videos_limit * 5, 30)
+        out(f"Paso 4: Buscando ultimos {pool_limit} videos (#video-title)...")
+        videos_raw = actions.get_recent_videos_with_age(page, limit=pool_limit)
+        out(f"  -> Encontrados: {len(videos_raw)} videos.")
+
+        if days_back is not None:
+            out(f"Paso 4b: Filtrando por ultimos {days_back} dias...")
+            videos = [
+                {"title": str(v.get("title", "")), "url": str(v.get("url", ""))}
+                for v in videos_raw
+                if v.get("age_days") is not None and float(v["age_days"]) <= float(days_back)
+            ]
+            out(f"  -> Candidatos tras filtro: {len(videos)} videos.")
+        else:
+            videos = [
+                {"title": str(v.get("title", "")), "url": str(v.get("url", ""))}
+                for v in videos_raw
+            ]
+
+        # Keep the pool bounded if the caller requested a smaller limit.
+        videos = videos[:recent_videos_limit]
 
     if not videos:
         chosen_title = ""
         chosen_url = ""
         first_minute_transcript = ""
-        out("Paso 5: No se encontraron videos.")
+        out("Paso 5: No se encontraron videos (o ninguno coincidio con el filtro).")
         logger.warning("No recent videos found on channel", extra={"channel_url": channel_url})
     else:
         out("Paso 5: Eligiendo un video al azar...")
@@ -106,10 +128,11 @@ def run_channel_topic_pipeline(
             recent_videos_limit,
             extra={"title": chosen_title, "url": chosen_url},
         )
-        out(f"Paso 6: Obteniendo transcripcion (primeros {transcript_max_seconds:.0f} s)...")
-        first_minute_transcript = get_first_minute_transcript(
-            chosen_url, max_seconds=transcript_max_seconds
-        )
+        if transcript_max_seconds is None:
+            out("Paso 6: Obteniendo transcripcion (video completo)...")
+        else:
+            out(f"Paso 6: Obteniendo transcripcion (primeros {transcript_max_seconds:.0f} s)...")
+        first_minute_transcript = get_transcript_text(chosen_url, max_seconds=transcript_max_seconds)
         out(f"  -> Transcripcion: {len(first_minute_transcript)} caracteres.")
         logger.info(
             "Transcription done (chars=%s). Next step: build prompt to output/*.txt.",
@@ -127,7 +150,7 @@ def run_channel_topic_pipeline(
     if user_data_dir and chosen_url:
         extra_args = " --chrome-dev" if browser_channel == "chrome-dev" else ""
         logger.info(
-            "Next: python scripts/run_channel_topic_then_prompt.py <channel> --user-data-dir %s --chrome-profile %s%s",
+            "Next: python scripts/run_script_pipeline.py --channel <channel> --user-data-dir %s --chrome-profile %s%s",
             repr(str(user_data_dir)),
             repr(profile_directory or "Default"),
             extra_args,
