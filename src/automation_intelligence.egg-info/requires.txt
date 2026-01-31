@@ -1,0 +1,7 @@
+playwright>=1.48.0
+
+[dev]
+pytest>=8.0
+black>=24.0
+isort>=5.13
+ruff>=0.6

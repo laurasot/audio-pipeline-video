@@ -1,0 +1,115 @@
+Metadata-Version: 2.4
+Name: automation-intelligence
+Version: 0.1.0
+Summary: Playwright + Python automation for video pipelines
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: playwright>=1.48.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: black>=24.0; extra == "dev"
+Requires-Dist: isort>=5.13; extra == "dev"
+Requires-Dist: ruff>=0.6; extra == "dev"
+
+# Auto Video Pipeline
+
+Pipeline con **Playwright** para automatizar la creación de videos: graba en video las sesiones del navegador mientras se ejecutan flujos definidos por pasos (navegar, hacer clic, escribir, esperar, etc.).
+
+Incluye un flujo **Python + Playwright** que identifica la temática del nuevo video navegando al canal de YouTube que se pasa como parámetro.
+
+## Requisitos
+
+- **Python 3.12+** y pip (stack principal)
+- Node.js 18+ y npm (opcional, solo para el pipeline TypeScript / flujos demo)
+
+## Instalación
+
+Stack **Python + Playwright** (recomendado):
+
+```bash
+pip install -e .
+playwright install chromium
+```
+
+## Uso
+
+### Pipeline Python: identificar temática desde un canal
+
+Entra al canal indicado, toma los últimos 10 vídeos y elige uno al azar como tema:
+
+```bash
+python scripts/run_channel_topic.py @nombre_canal
+python scripts/run_channel_topic.py "https://www.youtube.com/@nombre_canal"
+python scripts/run_channel_topic.py @nombre_canal --headed
+```
+
+Si no tienes el paquete instalado: `PYTHONPATH=src python scripts/run_channel_topic.py @nombre_canal`
+
+---
+
+## Estructura del proyecto
+
+```
+src/
+  pipeline/           # Motor del pipeline
+    types.ts          # Tipos (VideoFlow, PipelineContext, etc.)
+    runner.ts         # runVideoFlow, runVideoPipeline
+    steps.ts          # Helpers: delay, goto, click, fill, custom
+    index.ts          # Reexporta API pública
+  flows/              # Flujos de video
+    demo-flow.ts      # Ejemplo: example.com
+    web-recording-flow.ts   # Navegación Wikipedia + Playwright
+  cli.ts              # Entrada de línea de comandos
+```
+
+## Crear tu propio flujo
+
+1. Crea un archivo en `src/flows/` (por ejemplo `mi-flujo.ts`).
+2. Define un `VideoFlow` con `name`, `description` (opcional) y `steps`:
+
+```ts
+import { runVideoFlow, goto, wait, click } from '../pipeline/index.js';
+import type { VideoFlow } from '../pipeline/index.js';
+
+const miFlujo: VideoFlow = {
+  name: 'Mi video',
+  description: 'Abre una web, busca algo y graba',
+  steps: [
+    goto('https://example.com'),
+    wait(2000),
+    click('a'),
+    wait(1500),
+  ],
+};
+
+runVideoFlow(miFlujo, {
+  outputDir: 'output/videos',
+  width: 1280,
+  height: 720,
+  browser: 'chromium',
+  headless: true,
+}).then(({ videoPath, error }) => {
+  if (error) console.error(error);
+  else console.log('Video:', videoPath);
+});
+```
+
+3. Añade un script en `package.json` si quieres ejecutarlo con `npm run ...`.
+
+## Opciones del pipeline
+
+| Opción     | Default     | Descripción                          |
+|-----------|-------------|--------------------------------------|
+| `outputDir` | `output/videos` | Carpeta donde se guardan los videos |
+| `width`   | 1280        | Ancho del viewport y del video       |
+| `height`  | 720         | Alto del viewport y del video        |
+| `browser` | `chromium`  | `chromium` \| `firefox` \| `webkit`  |
+| `headless`| `true`      | Si es `false`, se muestra el navegador |
+
+## Variables de entorno
+
+- `VIDEO_OUTPUT_DIR`: directorio de salida de videos (en `record-web`).
+
+## Configuración de Playwright
+
+La configuración general está en `playwright.config.ts`. Allí se definen timeouts, reporter y proyectos (Chromium, Firefox, WebKit). El pipeline usa su propio runner (`runVideoFlow`) y no depende de `@playwright/test` para los flujos; la config sirve como referencia y para tests si los añades después.
