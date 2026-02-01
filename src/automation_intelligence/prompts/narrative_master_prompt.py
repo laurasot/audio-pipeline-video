@@ -127,7 +127,7 @@ etc.
 
 TÍTULO PARA YOUTUBE (OBLIGATORIO SOLO EN LA PRIMERA RESPUESTA)
 
-Antes del texto de la historia, debes devolver UN SOLO TÍTULO para el video, siguiendo estas reglas estrictas:
+Antes del texto de la historia, debes devolver UN SOLO TÍTULO para el video, DE MAXIMO 100 CARACTERES, siguiendo estas reglas estrictas:
 Máximo 1–2 frases.
 Primera persona.
 Tono de confesión tardía + giro impactante.
@@ -175,7 +175,7 @@ debes generar un bloque adicional llamado FRASES_IMPACTO.
 
 Estas frases deben cumplir todas las siguientes reglas:
 
-Generar MÍNIMO 6 FRASES
+Generar MÍNIMO 6 FRASES, de maximo 33 caracteres cada una.
 TODAS en MAYÚSCULAS
 Frases cortas o medianas (estilo thumbnail / overlay de YouTube)
 Lenguaje emocional, directo y claro

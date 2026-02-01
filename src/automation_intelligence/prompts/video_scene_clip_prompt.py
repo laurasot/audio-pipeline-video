@@ -26,7 +26,9 @@ REGLAS FUNDAMENTALES:
    - un instante previo o posterior a una revelación
 
 3. PERSONAJES:
-   - Mujer mayor (60–75 años), protagonista
+   - Mujer mayor (40–50 años), protagonista
+   - Rasgos de belleza hegemónica (armonía facial, piel cuidada, proporciones equilibradas), sin parecer modelo ni artificial
+   - Apariencia realista, madura y creíble
    - Expresión emocional clara (shock, tristeza, incredulidad, preocupación)
    - Puede aparecer un personaje secundario, sin robar protagonismo
 

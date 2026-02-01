@@ -10,3 +10,4 @@ test-results/
 .cursor/
 output/
 /venv/
+/prompts/

@@ -22,7 +22,9 @@ REGLAS FUNDAMENTALES:
    - o un instante previo a un giro importante
 
 3. PERSONAJES:
-   - Mujer mayor (40–60 años), protagonista
+   - Mujer mayor (40–50 años), protagonista
+   - Rasgos de belleza hegemónica (armonía facial, piel cuidada, proporciones equilibradas), sin parecer modelo ni artificial
+   - Apariencia realista, madura y creíble
    - Expresión emocional clara (shock, tristeza, incredulidad, miedo contenido)
    - Puede aparecer otro personaje secundario (familiar, empleado, camarero, funcionario), pero la mujer es el foco visual
 

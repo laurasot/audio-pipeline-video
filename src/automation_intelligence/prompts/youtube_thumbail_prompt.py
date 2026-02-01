@@ -1,10 +1,10 @@
 YOUTUBE_THUMBNAIL_PROMPT = """
 
-Retrato fotográfico hiperrealista de una mujer mayor elegante (60–70 años), 
+Retrato fotográfico hiperrealista de una mujer mayor elegante (40–50 años), 
 piel clara, cabello largo gris plateado, liso u ondulado suave, partido al medio, 
 rostro simétrico, rasgos finos, mirada directa y expresiva, ojos claros,
- expresión seria y reflexiva, ligera tristeza contenida, maquillaje natural, 
- iluminación suave de estudio, fondo neutro oscuro o degradado, 
+ expresión seria y reflexiva, ligera tristeza contenida, maquillaje natural, media sonrisa,
+ iluminación suave de estudio, fondo neutro oscuro o degradado a oscuro, 
  estilo fotografía editorial profesional, alta nitidez, profundidad de campo baja,
   encuadre desde el pecho hacia arriba, ropa sobria y elegante (blusa o chaqueta lisa en 
   tonos beige, crema, azul o rosado), sin joyas llamativas, sin sonrisa exagerada, atmósfera 
