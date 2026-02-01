@@ -32,7 +32,7 @@ Este script tiene 2 modos:
 # All-in-one (canal -> transcripción -> prompt)
 python scripts/run_channel1_script_pipeline.py --channel @nombre_canal
 python scripts/run_channel1_script_pipeline.py --channel "https://www.youtube.com/@nombre_canal" --show
-python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --days-back 7
+python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --recent-videos-limit 10
 python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --full-transcript
 python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --transcript-seconds 90
 
@@ -50,11 +50,11 @@ python scripts/run_channel1_script_pipeline.py --topic "..." --context-file tran
 Este script hace: canal -> elige video -> transcribe -> genera un `.txt` con el prompt `YOUTUBE_SCRIPT_PARAPHRASE_PROMPT`.
 
 ```bash
-python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --days-back 7 --transcript-seconds 60
+python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --recent-videos-limit 10 --transcript-seconds 60
 python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --full-transcript
 ```
 
-### Descargar imágenes de una persona (DuckDuckGo Images)
+### Descargar imágenes y videos cortos de una persona (DuckDuckGo)
 
 Instala el extra:
 
@@ -65,12 +65,22 @@ pip install -e ".[images]"
 Uso:
 
 ```bash
-python scripts/download_person_images.py "Scarlett Johansson" --num 12 --orientation horizontal
-python scripts/download_person_images.py "Scarlett Johansson" --num 12 --orientation vertical
-python scripts/download_person_images.py "Scarlett Johansson" --num 12 --orientation any
+python scripts/download_person_media.py "Scarlett Johansson" --num 12 --orientation horizontal
+python scripts/download_person_media.py "Scarlett Johansson" --num 12 --orientation vertical
+python scripts/download_person_media.py "Scarlett Johansson" --num 12 --orientation any
+
+# Imágenes + videos cortos (descarga N imágenes y N videos)
+python scripts/download_person_media.py "Scarlett Johansson" --num 12 --orientation horizontal --videos
+
+# Videos más largos (hasta 2 minutos)
+python scripts/download_person_media.py "Scarlett Johansson" --num 6 --videos --max-video-duration 120
 ```
 
-Salida por defecto: `output/images/<persona>/` (está ignorado por git).
+Los videos se descargan usando **yt-dlp** (soporta YouTube, TikTok, Instagram, etc.). Por defecto solo descarga videos de hasta **60 segundos** (1 minuto).
+
+Salida por defecto:
+- Imágenes: `output/images/<persona>/`
+- Videos: `output/videos/<persona>/`
 
 ---
 

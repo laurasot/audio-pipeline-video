@@ -5,11 +5,18 @@ Summary: Playwright + Python automation for video pipelines
 Requires-Python: >=3.12
 Description-Content-Type: text/markdown
 Requires-Dist: playwright>=1.48.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: youtube-transcript-api>=1.0.0
 Provides-Extra: dev
 Requires-Dist: pytest>=8.0; extra == "dev"
 Requires-Dist: black>=24.0; extra == "dev"
 Requires-Dist: isort>=5.13; extra == "dev"
 Requires-Dist: ruff>=0.6; extra == "dev"
+Provides-Extra: images
+Requires-Dist: duckduckgo-search; extra == "images"
+Requires-Dist: Pillow; extra == "images"
+Requires-Dist: requests; extra == "images"
+Requires-Dist: yt-dlp; extra == "images"
 
 # Auto Video Pipeline
 
@@ -20,7 +27,6 @@ Incluye un flujo **Python + Playwright** que identifica la temática del nuevo v
 ## Requisitos
 
 - **Python 3.12+** y pip (stack principal)
-- Node.js 18+ y npm (opcional, solo para el pipeline TypeScript / flujos demo)
 
 ## Instalación
 
@@ -31,19 +37,70 @@ pip install -e .
 playwright install chromium
 ```
 
+**Importante:** tras `pip install`, hay que ejecutar `playwright install chromium` (o `playwright install`) en el mismo entorno donde corres el script. Esa orden descarga Chromium; si no la ejecutas, verás *Executable doesn't exist* al lanzar el pipeline.
+
 ## Uso
 
-### Pipeline Python: identificar temática desde un canal
+### Pipeline Python: generar prompt narrativo en un `.txt`
 
-Entra al canal indicado, toma los últimos 10 vídeos y elige uno al azar como tema:
+Este script tiene 2 modos:
+
+- **All-in-one**: canal -> elige video -> obtiene transcripción -> genera prompt -> guarda `.txt`
+- **Paso 2**: topic + context -> genera prompt -> guarda `.txt`
 
 ```bash
-python scripts/run_channel_topic.py @nombre_canal
-python scripts/run_channel_topic.py "https://www.youtube.com/@nombre_canal"
-python scripts/run_channel_topic.py @nombre_canal --headed
+# All-in-one (canal -> transcripción -> prompt)
+python scripts/run_channel1_script_pipeline.py --channel @nombre_canal
+python scripts/run_channel1_script_pipeline.py --channel "https://www.youtube.com/@nombre_canal" --show
+python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --recent-videos-limit 10
+python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --full-transcript
+python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --transcript-seconds 90
+
+# Paso 2 (topic + context -> prompt)
+python scripts/run_channel1_script_pipeline.py --topic "Titulo del video" --context "Texto de la transcripcion..."
+python scripts/run_channel1_script_pipeline.py --topic "..." --context-file transcript.txt
 ```
 
-Si no tienes el paquete instalado: `PYTHONPATH=src python scripts/run_channel_topic.py @nombre_canal`
+**Perfil de Chrome (all-in-one):** con `--chrome-profile` usas tu Chrome (cookies, etc.). Sin nombre = perfil **Default**. Con nombre = ese perfil: `--chrome-profile "Profile 1"`, `"Profile 2"`, etc. Con `--chrome-dev` usas la ruta de **Chrome Dev**. Con `--user-data-dir` pasas la ruta completa de **User Data**. Debes **cerrar Chrome** (o al menos ese perfil) antes de ejecutar.
+
+**Transcripción (all-in-one):** por defecto toma segundos desde `.env` (`TRANSCRIPT_MAX_SECONDS`). Usa `--transcript-seconds` para cambiarlo o `--full-transcript` para transcribir todo el video.
+
+### Canal 2: prompt para parafrasear guion (solo `YOUTUBE_SCRIPT_PARAPHRASE_PROMPT`)
+
+Este script hace: canal -> elige video -> transcribe -> genera un `.txt` con el prompt `YOUTUBE_SCRIPT_PARAPHRASE_PROMPT`.
+
+```bash
+python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --recent-videos-limit 10 --transcript-seconds 60
+python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --full-transcript
+```
+
+### Descargar imágenes y videos cortos de una persona (DuckDuckGo)
+
+Instala el extra:
+
+```bash
+pip install -e ".[images]"
+```
+
+Uso:
+
+```bash
+python scripts/download_person_media.py "Scarlett Johansson" --num 12 --orientation horizontal
+python scripts/download_person_media.py "Scarlett Johansson" --num 12 --orientation vertical
+python scripts/download_person_media.py "Scarlett Johansson" --num 12 --orientation any
+
+# Imágenes + videos cortos (descarga N imágenes y N videos)
+python scripts/download_person_media.py "Scarlett Johansson" --num 12 --orientation horizontal --videos
+
+# Videos más largos (hasta 2 minutos)
+python scripts/download_person_media.py "Scarlett Johansson" --num 6 --videos --max-video-duration 120
+```
+
+Los videos se descargan usando **yt-dlp** (soporta YouTube, TikTok, Instagram, etc.). Por defecto solo descarga videos de hasta **60 segundos** (1 minuto).
+
+Salida por defecto:
+- Imágenes: `output/images/<persona>/`
+- Videos: `output/videos/<persona>/`
 
 ---
 
@@ -51,65 +108,12 @@ Si no tienes el paquete instalado: `PYTHONPATH=src python scripts/run_channel_to
 
 ```
 src/
-  pipeline/           # Motor del pipeline
-    types.ts          # Tipos (VideoFlow, PipelineContext, etc.)
-    runner.ts         # runVideoFlow, runVideoPipeline
-    steps.ts          # Helpers: delay, goto, click, fill, custom
-    index.ts          # Reexporta API pública
-  flows/              # Flujos de video
-    demo-flow.ts      # Ejemplo: example.com
-    web-recording-flow.ts   # Navegación Wikipedia + Playwright
-  cli.ts              # Entrada de línea de comandos
+  automation_intelligence/
+    browser/          # Helpers Playwright (acciones, navegación, perfiles)
+    config/           # Settings (.env, defaults, etc.)
+    logging/          # Logger
+    pipelines/        # Pipelines (channel_topic, script/chatgpt, etc.)
+    prompts/          # Prompts (p. ej. narrative_master_prompt)
+    transcript.py     # Utilidades de transcripción
 ```
 
-## Crear tu propio flujo
-
-1. Crea un archivo en `src/flows/` (por ejemplo `mi-flujo.ts`).
-2. Define un `VideoFlow` con `name`, `description` (opcional) y `steps`:
-
-```ts
-import { runVideoFlow, goto, wait, click } from '../pipeline/index.js';
-import type { VideoFlow } from '../pipeline/index.js';
-
-const miFlujo: VideoFlow = {
-  name: 'Mi video',
-  description: 'Abre una web, busca algo y graba',
-  steps: [
-    goto('https://example.com'),
-    wait(2000),
-    click('a'),
-    wait(1500),
-  ],
-};
-
-runVideoFlow(miFlujo, {
-  outputDir: 'output/videos',
-  width: 1280,
-  height: 720,
-  browser: 'chromium',
-  headless: true,
-}).then(({ videoPath, error }) => {
-  if (error) console.error(error);
-  else console.log('Video:', videoPath);
-});
-```
-
-3. Añade un script en `package.json` si quieres ejecutarlo con `npm run ...`.
-
-## Opciones del pipeline
-
-| Opción     | Default     | Descripción                          |
-|-----------|-------------|--------------------------------------|
-| `outputDir` | `output/videos` | Carpeta donde se guardan los videos |
-| `width`   | 1280        | Ancho del viewport y del video       |
-| `height`  | 720         | Alto del viewport y del video        |
-| `browser` | `chromium`  | `chromium` \| `firefox` \| `webkit`  |
-| `headless`| `true`      | Si es `false`, se muestra el navegador |
-
-## Variables de entorno
-
-- `VIDEO_OUTPUT_DIR`: directorio de salida de videos (en `record-web`).
-
-## Configuración de Playwright
-
-La configuración general está en `playwright.config.ts`. Allí se definen timeouts, reporter y proyectos (Chromium, Firefox, WebKit). El pipeline usa su propio runner (`runVideoFlow`) y no depende de `@playwright/test` para los flujos; la config sirve como referencia y para tests si los añades después.

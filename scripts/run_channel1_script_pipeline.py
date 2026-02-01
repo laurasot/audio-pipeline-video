@@ -51,11 +51,11 @@ def main() -> None:
         help="All-in-one mode: Full path to Chrome 'User Data' folder (overrides base). E.g. ...\\Chrome\\User Data",
     )
     parser.add_argument(
-        "--days-back",
+        "--recent-videos-limit",
         type=int,
-        default=None,
-        metavar="DAYS",
-        help="All-in-one mode: Only consider videos uploaded/streamed within the last N days (best-effort).",
+        default=10,
+        metavar="N",
+        help="All-in-one mode: How many recent videos to consider (default: 10). One is chosen at random.",
     )
     parser.add_argument(
         "--transcript-seconds",
@@ -148,7 +148,7 @@ def main() -> None:
             profile_directory=profile_directory,
             browser_channel=browser_channel,
             transcript_max_seconds=transcript_max_seconds,
-            days_back=args.days_back,
+            recent_videos_limit=args.recent_videos_limit,
         )
         if not step1.chosen_video_url or not step1.first_minute_transcript:
             print("Step 1 did not produce a video or transcript. Stopping.")

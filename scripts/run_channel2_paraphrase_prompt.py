@@ -2,7 +2,7 @@
 """Channel 2: pick a recent video, transcribe, and generate YOUTUBE_SCRIPT_PARAPHRASE_PROMPT only.
 
 Example:
-  python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --days-back 7 --transcript-seconds 60
+  python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --recent-videos-limit 10 --transcript-seconds 60
   python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --full-transcript
 """
 
@@ -62,11 +62,11 @@ def main() -> None:
         help="Full path to Chrome 'User Data' folder. E.g. ...\\Chrome\\User Data",
     )
     parser.add_argument(
-        "--days-back",
+        "--recent-videos-limit",
         type=int,
-        default=None,
-        metavar="DAYS",
-        help="Only consider videos uploaded/streamed within the last N days (best-effort).",
+        default=10,
+        metavar="N",
+        help="How many recent videos to consider (default: 10). One is chosen at random.",
     )
     parser.add_argument(
         "--transcript-seconds",
@@ -131,14 +131,16 @@ def main() -> None:
         profile_directory=profile_directory,
         browser_channel=browser_channel,
         transcript_max_seconds=transcript_max_seconds,
-        days_back=args.days_back,
+        recent_videos_limit=args.recent_videos_limit,
     )
     if not step1.chosen_video_url or not step1.first_minute_transcript:
         print("Step 1 did not produce a video or transcript. Stopping.")
         sys.exit(1)
 
     print("\n=== Channel 2 / Step 2: Build paraphrase prompt (.txt) ===")
-    prompt_text = build_youtube_script_paraphrase_prompt(step1.first_minute_transcript)
+    prompt_text = build_youtube_script_paraphrase_prompt(
+        step1.chosen_video_title, step1.first_minute_transcript
+    )
 
     out_dir = Path(args.out_dir) if args.out_dir is not None else (PROJECT_ROOT / "output")
     out_dir.mkdir(parents=True, exist_ok=True)

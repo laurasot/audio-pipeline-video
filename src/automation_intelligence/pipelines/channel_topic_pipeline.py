@@ -42,7 +42,6 @@ def run_channel_topic_pipeline(
     *,
     headless: bool = True,
     recent_videos_limit: int = RECENT_VIDEOS_POOL_SIZE,
-    days_back: int | None = None,
     rng: random.Random | None = None,
     progress: Callable[[str], None] | None = None,
     user_data_dir: str | Path | None = None,
@@ -54,7 +53,6 @@ def run_channel_topic_pipeline(
 
     channel_param: URL, @handle, or path (e.g. @mychannel, /@mychannel, /channel/UC...).
     recent_videos_limit: pool size (default 10). One is chosen at random.
-    days_back: if set, only consider videos with relative age <= days_back (best-effort).
     rng: optional Random instance for reproducible tests.
     progress: optional callback (e.g. print) to show each step; receives one string per step.
     user_data_dir: Chrome "User Data" folder (parent of profiles).
@@ -79,42 +77,22 @@ def run_channel_topic_pipeline(
         channel=browser_channel,
     ) as context:
         page = new_page(context)
-        out("Paso 2: Navegando al canal...")
-        navigation.navigate_to_channel(page, channel_url)
+        out("Paso 2: Navegando al canal (Videos)...")
+        navigation.navigate_to_channel_videos(page, channel_url)
 
         out("Paso 3: Obteniendo nombre del canal...")
         channel_name = actions.get_channel_name(page)
         out(f"  -> Nombre: {channel_name}")
 
-        pool_limit = recent_videos_limit
-        if days_back is not None:
-            pool_limit = max(recent_videos_limit * 5, 30)
-        out(f"Paso 4: Buscando ultimos {pool_limit} videos (#video-title)...")
-        videos_raw = actions.get_recent_videos_with_age(page, limit=pool_limit)
-        out(f"  -> Encontrados: {len(videos_raw)} videos.")
-
-        if days_back is not None:
-            out(f"Paso 4b: Filtrando por ultimos {days_back} dias...")
-            videos = [
-                {"title": str(v.get("title", "")), "url": str(v.get("url", ""))}
-                for v in videos_raw
-                if v.get("age_days") is not None and float(v["age_days"]) <= float(days_back)
-            ]
-            out(f"  -> Candidatos tras filtro: {len(videos)} videos.")
-        else:
-            videos = [
-                {"title": str(v.get("title", "")), "url": str(v.get("url", ""))}
-                for v in videos_raw
-            ]
-
-        # Keep the pool bounded if the caller requested a smaller limit.
-        videos = videos[:recent_videos_limit]
+        out(f"Paso 4: Buscando ultimos {recent_videos_limit} videos (#video-title)...")
+        videos = actions.get_recent_videos(page, limit=recent_videos_limit)
+        out(f"  -> Encontrados: {len(videos)} videos.")
 
     if not videos:
         chosen_title = ""
         chosen_url = ""
         first_minute_transcript = ""
-        out("Paso 5: No se encontraron videos (o ninguno coincidio con el filtro).")
+        out("Paso 5: No se encontraron videos.")
         logger.warning("No recent videos found on channel", extra={"channel_url": channel_url})
     else:
         out("Paso 5: Eligiendo un video al azar...")

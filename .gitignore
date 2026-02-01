@@ -11,3 +11,4 @@ test-results/
 output/
 /venv/
 /prompts/
+src/automation_intelligence/prompts/

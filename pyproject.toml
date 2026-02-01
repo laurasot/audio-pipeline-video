@@ -26,6 +26,7 @@ images = [
     "duckduckgo-search",
     "Pillow",
     "requests",
+    "yt-dlp",
 ]
 
 [tool.setuptools.packages.find]

@@ -1,7 +1,15 @@
 playwright>=1.48.0
+python-dotenv>=1.0.0
+youtube-transcript-api>=1.0.0
 
 [dev]
 pytest>=8.0
 black>=24.0
 isort>=5.13
 ruff>=0.6
+
+[images]
+duckduckgo-search
+Pillow
+requests
+yt-dlp
