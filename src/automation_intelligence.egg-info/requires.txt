@@ -9,7 +9,9 @@ isort>=5.13
 ruff>=0.6
 
 [images]
-duckduckgo-search
+ddgs
 Pillow
 requests
 yt-dlp
+opencv-python
+easyocr

@@ -23,10 +23,12 @@ dev = [
 ]
 
 images = [
-    "duckduckgo-search",
+    "ddgs",
     "Pillow",
     "requests",
     "yt-dlp",
+    "opencv-python",
+    "easyocr",
 ]
 
 [tool.setuptools.packages.find]

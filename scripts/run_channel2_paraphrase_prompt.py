@@ -13,6 +13,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 # Allow running without install: add src to path when executed as script
 if __name__ == "__main__":
@@ -28,6 +29,118 @@ def _slugify_filename(text: str, *, max_len: int = 80) -> str:
     t = re.sub(r"[^a-z0-9 _-]+", "", t)
     t = t.replace(" ", "_").strip("_-")
     return (t or "prompt")[:max_len]
+
+
+def _extract_youtube_video_id(url: str) -> str | None:
+    """Extract a YouTube video id from common URL shapes."""
+    if not url:
+        return None
+    u = url.strip()
+    try:
+        parsed = urlparse(u)
+    except Exception:
+        return None
+
+    host = (parsed.netloc or "").lower()
+    path = parsed.path or ""
+
+    # https://youtu.be/<id>
+    if "youtu.be" in host:
+        vid = path.strip("/").split("/", 1)[0]
+        return vid or None
+
+    # https://www.youtube.com/watch?v=<id>
+    if "youtube.com" in host:
+        qs = parse_qs(parsed.query or "")
+        if "v" in qs and qs["v"]:
+            return qs["v"][0]
+
+        # https://www.youtube.com/shorts/<id>
+        m = re.search(r"/shorts/([A-Za-z0-9_-]{6,})", path)
+        if m:
+            return m.group(1)
+
+        # https://www.youtube.com/embed/<id>
+        m = re.search(r"/embed/([A-Za-z0-9_-]{6,})", path)
+        if m:
+            return m.group(1)
+
+    return None
+
+
+def _require_thumbnail_ocr_deps():
+    """Import deps only when thumbnail/OCR is used."""
+    try:
+        import requests  # type: ignore
+        import easyocr  # type: ignore
+        from PIL import Image  # type: ignore
+    except ModuleNotFoundError as e:
+        missing = getattr(e, "name", None) or "a required dependency"
+        print(
+            "Missing dependency for thumbnail OCR.\n"
+            f"  Missing: {missing}\n"
+            '  Install: pip install -e ".[images]"  (or: pip install requests easyocr Pillow)',
+            file=sys.stderr,
+        )
+        raise SystemExit(2) from e
+    return requests, easyocr, Image
+
+
+def _download_youtube_thumbnail(video_url: str, out_path: Path) -> Path | None:
+    """Download the best available YouTube thumbnail for a video URL."""
+    vid = _extract_youtube_video_id(video_url)
+    if not vid:
+        return None
+
+    requests, _, _ = _require_thumbnail_ocr_deps()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Try best-to-worst thumbnail variants
+    candidates = [
+        f"https://i.ytimg.com/vi/{vid}/maxresdefault.jpg",
+        f"https://i.ytimg.com/vi/{vid}/sddefault.jpg",
+        f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+        f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg",
+        f"https://i.ytimg.com/vi/{vid}/default.jpg",
+    ]
+
+    sess = requests.Session()
+    sess.headers.update(
+        {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        }
+    )
+
+    for thumb_url in candidates:
+        try:
+            resp = sess.get(thumb_url, timeout=12)
+            if resp.status_code != 200:
+                continue
+            ct = (resp.headers.get("content-type") or "").lower()
+            if ct and "image/" not in ct:
+                continue
+            out_path.write_bytes(resp.content)
+            return out_path
+        except Exception:
+            continue
+
+    return None
+
+
+def _ocr_image(image_path: Path) -> str:
+    """Run OCR on an image file and return the detected text."""
+    _, easyocr, Image = _require_thumbnail_ocr_deps()
+
+    # CPU mode for compatibility.
+    reader = easyocr.Reader(["en", "es"], gpu=False, verbose=False)
+    img = Image.open(image_path)
+    results = reader.readtext(img, detail=0, paragraph=True)
+    text = "\n".join([r.strip() for r in results if isinstance(r, str) and r.strip()])
+    return text.strip()
 
 
 def main() -> None:
@@ -92,6 +205,11 @@ def main() -> None:
         default=None,
         help="Output filename (default: auto timestamp + chosen video title + _paraphrase).",
     )
+    parser.add_argument(
+        "--thumbnail-ocr",
+        action="store_true",
+        help="Also download the chosen video's YouTube thumbnail and run OCR (writes a *_thumbnail_ocr.txt file).",
+    )
     args = parser.parse_args()
 
     from automation_intelligence.config.settings import (
@@ -153,6 +271,26 @@ def main() -> None:
 
     out_path = (out_dir / filename).resolve()
     out_path.write_text(prompt_text, encoding="utf-8")
+
+    if args.thumbnail_ocr:
+        thumbs_dir = out_dir / "thumbnails"
+        base = out_path.stem.replace("_paraphrase", "")
+        thumb_path = (thumbs_dir / f"{base}_thumbnail.jpg").resolve()
+        downloaded = _download_youtube_thumbnail(step1.chosen_video_url, thumb_path)
+        if downloaded is None:
+            print("\nThumbnail: could not download (unsupported URL or not available).")
+        else:
+            try:
+                ocr_text = _ocr_image(downloaded)
+            except SystemExit:
+                raise
+            except Exception as e:
+                print(f"\nThumbnail OCR failed: {type(e).__name__}: {e}")
+            else:
+                ocr_out = (out_dir / f"{base}_thumbnail_ocr.txt").resolve()
+                ocr_out.write_text(ocr_text, encoding="utf-8")
+                print("\nThumbnail:", str(downloaded))
+                print("Thumbnail OCR file:", str(ocr_out))
 
     print("\nDone.")
     print("Chosen video:", step1.chosen_video_title)
