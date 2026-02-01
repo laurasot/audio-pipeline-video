@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI entrypoint:
+"""Channel 1 CLI entrypoint:
 
 - Step 2 (default): build narrative prompt from --topic + --context and save to output/*.txt
 - All-in-one: pass --channel to run Step 1 (Playwright -> pick video -> transcript) and then Step 2.
@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Build narrative prompt to output/*.txt (from topic+context) or run all-in-one from a YouTube channel."
+        description="Channel 1: Build narrative prompt to output/*.txt (from topic+context) or run all-in-one from a YouTube channel."
     )
     parser.add_argument(
         "--channel",
@@ -132,7 +132,11 @@ def main() -> None:
             profile_directory = None
             browser_channel = None
 
-        transcript_sec = args.transcript_seconds if args.transcript_seconds is not None else TRANSCRIPT_MAX_SECONDS
+        transcript_sec = (
+            args.transcript_seconds
+            if args.transcript_seconds is not None
+            else TRANSCRIPT_MAX_SECONDS
+        )
         transcript_max_seconds = None if args.full_transcript else float(transcript_sec)
 
         print("=== Step 1: Channel topic + transcript ===")
@@ -183,3 +187,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

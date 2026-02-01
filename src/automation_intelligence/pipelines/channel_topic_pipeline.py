@@ -150,7 +150,7 @@ def run_channel_topic_pipeline(
     if user_data_dir and chosen_url:
         extra_args = " --chrome-dev" if browser_channel == "chrome-dev" else ""
         logger.info(
-            "Next: python scripts/run_script_pipeline.py --channel <channel> --user-data-dir %s --chrome-profile %s%s",
+            "Next: python scripts/run_channel1_script_pipeline.py --channel <channel> --user-data-dir %s --chrome-profile %s%s",
             repr(str(user_data_dir)),
             repr(profile_directory or "Default"),
             extra_args,

@@ -30,20 +30,29 @@ Este script tiene 2 modos:
 
 ```bash
 # All-in-one (canal -> transcripción -> prompt)
-python scripts/run_script_pipeline.py --channel @nombre_canal
-python scripts/run_script_pipeline.py --channel "https://www.youtube.com/@nombre_canal" --show
-python scripts/run_script_pipeline.py --channel @nombre_canal --days-back 7
-python scripts/run_script_pipeline.py --channel @nombre_canal --full-transcript
-python scripts/run_script_pipeline.py --channel @nombre_canal --transcript-seconds 90
+python scripts/run_channel1_script_pipeline.py --channel @nombre_canal
+python scripts/run_channel1_script_pipeline.py --channel "https://www.youtube.com/@nombre_canal" --show
+python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --days-back 7
+python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --full-transcript
+python scripts/run_channel1_script_pipeline.py --channel @nombre_canal --transcript-seconds 90
 
 # Paso 2 (topic + context -> prompt)
-python scripts/run_script_pipeline.py --topic "Titulo del video" --context "Texto de la transcripcion..."
-python scripts/run_script_pipeline.py --topic "..." --context-file transcript.txt
+python scripts/run_channel1_script_pipeline.py --topic "Titulo del video" --context "Texto de la transcripcion..."
+python scripts/run_channel1_script_pipeline.py --topic "..." --context-file transcript.txt
 ```
 
 **Perfil de Chrome (all-in-one):** con `--chrome-profile` usas tu Chrome (cookies, etc.). Sin nombre = perfil **Default**. Con nombre = ese perfil: `--chrome-profile "Profile 1"`, `"Profile 2"`, etc. Con `--chrome-dev` usas la ruta de **Chrome Dev**. Con `--user-data-dir` pasas la ruta completa de **User Data**. Debes **cerrar Chrome** (o al menos ese perfil) antes de ejecutar.
 
 **Transcripción (all-in-one):** por defecto toma segundos desde `.env` (`TRANSCRIPT_MAX_SECONDS`). Usa `--transcript-seconds` para cambiarlo o `--full-transcript` para transcribir todo el video.
+
+### Canal 2: prompt para parafrasear guion (solo `YOUTUBE_SCRIPT_PARAPHRASE_PROMPT`)
+
+Este script hace: canal -> elige video -> transcribe -> genera un `.txt` con el prompt `YOUTUBE_SCRIPT_PARAPHRASE_PROMPT`.
+
+```bash
+python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --days-back 7 --transcript-seconds 60
+python scripts/run_channel2_paraphrase_prompt.py @nombre_canal --full-transcript
+```
 
 ### Descargar imágenes de una persona (DuckDuckGo Images)
 
